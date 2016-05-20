@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="{{ LANGUAGE_CODE }}"{% if LANGUAGE_BIDI %} dir="rtl"{% endif %}>
+{% load nav_tags i18n staticfiles %}
+
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="keywords" content="{% block meta_keywords %}{% endblock %}">
+<meta name="description" content="{% block meta_description %}{% endblock %}">
+<title>MVP project</title>
+<link rel="shortcut icon" href="{% static "img/favicon.ico" %}">
+
+<link rel="stylesheet" href="{% static "css/bootstrap3.2.css" %}">
+<link rel="stylesheet" href="{% static "css/jquery-ui.css" %}">  
+
+<script src="{% static "js/jquery.js" %}"></script>
+<script src="{% static "js/bootstrap.js" %}"></script>
+<script src="{% static "js/jquery-ui.js" %}"></script>
+<script src="{% static "js/mvp.js" %}"></script>
+
+<link href="{% static "font-awesome/css/font-awesome.min.css" %}" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic,700italic" rel="stylesheet" type="text/css">
+
+<!--[if lt IE 9]>
+<script src="{% static "js/html5shiv.js" %}"></script>
+<script src="{% static "js/respond.min.js" %}"></script>
+<![endif]-->
+
+{% block extra_head %}{% endblock %}
+
+</head>
+
+<body id="{% block body_id %}body{% endblock %}">
+
+<nav class="navbar navbar-inverse  navbar-fixed-top">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="/">MVP</a>
+    </div>
+    <div class="collapse navbar-collapse" id="myNavbar">
+      <ul class="nav navbar-nav navbar-right">
+        {% if user.is_authenticated %}
+          <li class="dropdown">
+            <a class="dropdown-toggle" data-toggle="dropdown" href="#"><span class="glyphicon glyphicon-tasks"></span> My teams
+            <span class="caret"></span></a>
+            <ul class="dropdown-menu">
+              {% autoescape off %}{% myteam_menu '' %}{% endautoescape %}
+            </ul>
+          </li>              
+          <li class="dropdown">
+            <a class="dropdown-toggle" data-toggle="dropdown" href="#"><span class="glyphicon glyphicon-th"></span> Teams
+            <span class="caret"></span></a>
+            <ul class="dropdown-menu">
+              {% autoescape off %}{% team_menu '' %}{% endautoescape %}
+              <li role="separator" class="divider"></li>
+              <li><a href="javascript:create_team();">Create a team <span class="glyphicon glyphicon-plus"></span></a></li>
+            </ul>
+          </li>              
+          <li class="dropdown">
+            <a class="dropdown-toggle" data-toggle="dropdown" href="#"><span class="glyphicon glyphicon-user"></span> User Details
+            <span class="caret"></span></a>
+            <ul class="dropdown-menu">
+              <li><a href="/plan">Plans <span class="glyphicon glyphicon-star"></span></a></li>
+              <li><a href="/accounts/password/change">Change password <span class="glyphicon glyphicon-search"></span></a></li>
+              <li><a href="/accounts/logout/">Logout <span class="glyphicon glyphicon-user"></span></a></li>
+            </ul>
+          </li>              
+        {% else %}
+          <li><a href="/accounts/login/"><span class="glyphicon glyphicon-user"></span> Login</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+
+
+{% block meta_main %}
+
+<div class="container">
+<div class="row" style="margin-top: 40px;">
+
+<div class="col-md-offset-1 col-md-8 middle">
+<h1>{% block title %}{% endblock %}</h1>
+{% block main %}
+{% endblock %}
+</div>
+
+<div class="col-md-3 right">
+  {% block right_panel %}
+
+
+
+
+  <!-- Login Confirm Modal -->
+  <div id="dialog-confirm" title="Please login first!" style="display:none;">
+    <p><span class="ui-icon ui-icon-alert" style="float:left; margin:0 7px 20px 0;"></span>You have to login to save your settings.</p>
+  </div>
+
+</div>
+
+   {% endblock %}
+</div>
+
+</div>
+</div>
+
+{% endblock %}
+
+  <!-- Team Create Confirm Modal -->
+  <div id="create_team_dlg" title="Create a team" style="display:none;">
+    <form id="create-team-form">
+    {% csrf_token %}
+    <div style="padding: 18px 0px 16px 3px;">
+    <label>Team Name: </label>
+    <input type="text" size="30" id="team_name">
+    </div>
+    </form>
+  </div>
+
+<!-- Footer -->
+<footer>
+</footer>
+
+</body>
+</html>

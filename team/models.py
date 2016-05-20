@@ -25,7 +25,8 @@ class Account(models.Model):
 	name = models.CharField(max_length=50)
 	team_limit = models.IntegerField(default=0)
 	budget = models.IntegerField(default=0)
-
+	description = models.TextField(null=True, blank=True)
+	
 	def __unicode__(self):
 		return self.name
 		
@@ -34,8 +35,10 @@ class TeamUser(AbstractUser):
 	"""
 	Team user class, it could be team owner, too.
 	"""
-	team = models.ManyToManyField('Team', related_name="team")
-	account = models.ForeignKey(Account, related_name="account")
+	# team = models.ManyToManyField('Team', related_name="team", blank=True)
+	account = models.ForeignKey(Account, related_name="account", null=True, blank=True)
+	is_temp = models.BooleanField(default=False)
+	exp_date = models.DateField(null=True, blank=True)
 
 	def __unicode__(self):
 		return self.username
@@ -47,8 +50,8 @@ class Team(models.Model):
 	"""
 	name = models.CharField(max_length=50)
 	owner = models.ForeignKey(TeamUser, related_name="owner")
-	member = models.ManyToManyField(TeamUser, related_name='team_member')
-	service = models.ManyToManyField(Service, related_name='team_service')
+	member = models.ManyToManyField(TeamUser, related_name='team_member', blank=True)
+	service = models.ManyToManyField(Service, related_name='team_service', blank=True)
 	is_active = models.BooleanField(default=True)
 
 	def __unicode__(self):

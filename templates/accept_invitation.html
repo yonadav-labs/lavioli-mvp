@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load staticfiles %} 
+
+{% block main %}
+<div class="row">
+<div class="col-md-10">
+<h3>Welcome to team: {{team.name}}</h3>
+<h4>Now the following services are available for you in this team</h4>
+<ul name='services'>
+	{% for service in services %}
+		<li>{{ service.name }}</li>
+	{% endfor %}
+</ul>
+<p>You can see more detailed information about your team <a href="/myteam/{{team.id}}">here</a>.</p>
+{% if teamuser.is_temp %}
+	<p><b>Note:</b> Please change your password <a href="/accounts/password/change">here</a>.</p>
+{% endif%}
+</div>
+</div>
+{% endblock %}

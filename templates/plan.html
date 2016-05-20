@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% load i18n %}
+
+{% block main %}
+  <div class="row">
+  <div class="col-md-10">
+    {% if account %}
+    <h3> Current Option: {{ account.name }} </h3>
+    <p>Expiratoin Date: {{ teamuser.exp_date }}</p>
+    <p>Bill Amount: ${{ account.budget }}</p>
+    <p>You can create upto {{ account.team_limit }} teams with this account.</p>
+    {% else %}
+    <h3> Current Option: Free </h3>
+    <p> You don't have bill information. </p>
+    {% endif %}
+    <a href="/update_account" class="btn btn-primary" style="margin-right:20px;"> Update Account </a>    
+  </div>  
+  </div>  
+{% endblock %}

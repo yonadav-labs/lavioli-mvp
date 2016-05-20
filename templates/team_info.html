@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% load i18n %}
+
+{% block main %}
+    <div class="row">
+    <h3> Team: {{ team.name }} </h3>
+    <div class="col-md-6">
+     <table class="table table-hover">
+      <caption>Member List</caption>
+      <tbody>
+      {% for member in members %}
+        <tr>
+          <td>{{ member.email }}</td>
+          <td>
+            <a href="#" onclick="remove_member({{member.id}}, {{team.id}});" style="float: right;"><span class="glyphicon glyphicon-trash"></span></a>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+     </table>  
+    </div>
+    <div class="col-md-6">
+     <table class="table table-hover">
+      <caption>Service List</caption>
+      <tbody>
+      {% for service in services %}
+        <tr>
+          <td>{{ service.name }}</td>
+          <td>
+            <a href="#" onclick="remove_service({{service.id}}, {{team.id}});" style="float: right;"><span class="glyphicon glyphicon-trash"></span></a>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+     </table>  
+    </div>    
+    <a href="javascript:invite_member({{team.id}});" class="btn btn-primary" style="margin-right:20px;"> Add Member </a>
+    <a href="/add_service/{{team.id}}" class="btn btn-primary" style="margin-right:20px;"> Add Service </a>
+  </div>
+  <!-- Team Member Invite Confirm Modal -->
+  <div id="team_member_dlg" title="Invite a team member" style="display:none;">
+    <form id="team-member-form">
+    {% csrf_token %}
+    <div style="padding: 18px 0px 16px 3px;">
+    <label>Email: </label>
+    <input type="text" size="30" id="user_email">
+    </div>
+    </form>
+  </div>  
+{% endblock %}
