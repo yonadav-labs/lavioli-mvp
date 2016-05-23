@@ -14,8 +14,8 @@ from .models import *
 
 
 stripe_keys = {
-    'stripe_secret_key': 'sk_test_Lu2XXzNk4NTCpml4LTJeP9nv',
-    'publishable_key': 'pk_test_LZD0hxNPL2niArcUwTE3GyDH'
+    'stripe_secret_key': 'sk_test_1AFSPD5Dg8RihyPPtylWiSsR',
+    'publishable_key': 'pk_test_Q4RGBzPFhWbMP2daCqMg6Rj7'
 }
 
 
@@ -59,13 +59,15 @@ def add_service(request, id):
 def update_account(request):
 	teamuser = TeamUser.objects.get(email=request.user.email)
 	account = teamuser.account
+
+	other_accounts = Account.objects.all()
 	if account:
-		other_accounts = Account.objects.all().exclude(id__in=[account.id])
-	else:
-		other_accounts = Account.objects.all()
+		other_accounts = other_accounts.exclude(id__in=[account.id])
+		
 
 	return render(request, 'update_account.html', {
 		'accounts': other_accounts,
+		'email': teamuser.email,
 		'key': stripe_keys['publishable_key'],
 		})
 
@@ -93,6 +95,9 @@ def charge_account(request):
 		description='MVP Charge'
 	)
 
+	teamuser.last4_card_num = charge.source.last4
+	teamuser.save()
+
 	return HttpResponseRedirect('/plan')
 
 @login_required
@@ -113,6 +118,15 @@ def plan(request):
 		'teamuser': teamuser,
 		'account': account,
 		})
+
+@csrf_exempt
+def cancel_account(request):
+	teamuser = TeamUser.objects.get(email=request.user.email)
+	teamuser.account = None
+	teamuser.save()
+	
+	# remove periodic payment.
+	return HttpResponseRedirect('/plan')
 
 @login_required
 def accept_invitation(request, m_id, t_id):

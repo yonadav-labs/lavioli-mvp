@@ -2,4 +2,3 @@
 *.pyo
 .DS_Store
 .coverage
-*sqlite3

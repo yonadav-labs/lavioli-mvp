@@ -20,9 +20,12 @@
               <input type="hidden" name="a_id" value="{{account.id}}">
               <script src="https://checkout.stripe.com/checkout.js" class="stripe-button"
                       data-key="{{ key }}"
+                      data-name="Update Account"
                       data-description="MVP Charge"
                       data-amount="{{ account.budget|mul:100 }}"
-                      data-locale="auto"></script>
+                      data-email="{{email}}"
+                      data-locale="auto">
+              </script>
             </form>
           </td>
         </tr>

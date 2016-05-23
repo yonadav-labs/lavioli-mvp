@@ -7,14 +7,32 @@
   <div class="col-md-10">
     {% if account %}
     <h3> Current Option: {{ account.name }} </h3>
-    <p>Expiratoin Date: {{ teamuser.exp_date }}</p>
-    <p>Bill Amount: ${{ account.budget }}</p>
-    <p>You can create upto {{ account.team_limit }} teams with this account.</p>
+    <hr>
+    <p> Card number: **** **** **** {{ teamuser.last4_card_num }}</p>
+    <p> Expiratoin Date: {{ teamuser.exp_date }}</p>
+    <p> Bill Amount: ${{ account.budget }}</p><br>
+    <p>You can create upto <b>{{ account.team_limit }}</b> teams with this account.</p>
+    <hr>
+    <a href="#" onclick="cancel_account();" class="btn btn-primary" style="margin-right:20px;"> Cancel Account </a>    
     {% else %}
     <h3> Current Option: Free </h3>
+    <hr>
     <p> You don't have bill information. </p>
+    <p> Your activity with this account is limited. </p>
+    <hr>
     {% endif %}
     <a href="/update_account" class="btn btn-primary" style="margin-right:20px;"> Update Account </a>    
   </div>  
   </div>  
+  <!-- Account Cancel Confirm Modal -->
+  <div id="account_cancel_dlg" title="Cancel current account" style="display:none;">
+    <form id="account-cancel-form">
+    {% csrf_token %}
+    <div style="padding: 18px 0px 16px 3px;">
+    <p>
+    Your account is canceled after current expiration date.</p>
+    </div>
+    </form>
+  </div>  
+
 {% endblock %}

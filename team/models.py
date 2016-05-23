@@ -35,11 +35,11 @@ class TeamUser(AbstractUser):
 	"""
 	Team user class, it could be team owner, too.
 	"""
-	# team = models.ManyToManyField('Team', related_name="team", blank=True)
 	account = models.ForeignKey(Account, related_name="account", null=True, blank=True)
 	is_temp = models.BooleanField(default=False)
 	exp_date = models.DateField(null=True, blank=True)
-
+	last4_card_num = models.CharField(max_length=4, null=True, blank=True)
+	
 	def __unicode__(self):
 		return self.username
 

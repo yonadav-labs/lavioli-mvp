@@ -152,3 +152,27 @@ function remove_service(s_id, t_id)
       return false;
   } 
 }
+
+function cancel_account()
+{
+    $( "#account_cancel_dlg" ).dialog({
+      resizable: false,
+      height:180,
+      width:400,
+      modal: true,
+      buttons: {
+        "Confirm": function() {
+          $.post('/cancel_account', {})
+          .success(function(result){
+            console.log('The account is canceled successfully!');
+            location.reload();          
+            $( this ).dialog( "close" );            
+          });
+        },
+        Cancel: function() {
+          $( this ).dialog( "close" );
+          return false;
+        }
+      }
+    }); 
+}
