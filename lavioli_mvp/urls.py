@@ -36,4 +36,5 @@ urlpatterns = [
     url(r'^accept_invitation/(?P<m_id>\d+)/(?P<t_id>\d+)$', team.views.accept_invitation, name='accept_invitation'),
     url(r'^charge_account$', team.views.charge_account, name='charge_account'),
     url(r'^cancel_account$', team.views.cancel_account, name='cancel_account'),    
+    url(r'^stripe_webhook$', team.views.stripe_webhook, name='stripe_webhook'),    
 ]

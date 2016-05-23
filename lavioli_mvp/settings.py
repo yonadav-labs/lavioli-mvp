@@ -18,6 +18,12 @@ PROJECT_APP_PATH = os.path.dirname(os.path.abspath(__file__))
 PROJECT_APP = os.path.basename(PROJECT_APP_PATH)
 
 
+# change with your stripe keys
+STRIPE_KEYS = {
+    'stripe_secret_key': 'sk_test_1AFSPD5Dg8RihyPPtylWiSsR',
+    'publishable_key': 'pk_test_Q4RGBzPFhWbMP2daCqMg6Rj7'
+}
+
 # Application definition
 
 INSTALLED_APPS = [

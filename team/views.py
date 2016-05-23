@@ -1,5 +1,6 @@
 import hashlib, datetime, random
 import stripe
+import json
 from datetime import timedelta
 
 from django.shortcuts import render
@@ -11,12 +12,6 @@ from django.conf import settings
 from django.contrib.auth.hashers import *
 
 from .models import *
-
-
-stripe_keys = {
-    'stripe_secret_key': 'sk_test_1AFSPD5Dg8RihyPPtylWiSsR',
-    'publishable_key': 'pk_test_Q4RGBzPFhWbMP2daCqMg6Rj7'
-}
 
 
 def dashboard(request):
@@ -68,34 +63,35 @@ def update_account(request):
 	return render(request, 'update_account.html', {
 		'accounts': other_accounts,
 		'email': teamuser.email,
-		'key': stripe_keys['publishable_key'],
+		'customer_id': teamuser.customer_id,
+		'key': settings.STRIPE_KEYS['publishable_key'],
 		})
 
 @login_required
 def charge_account(request):
 	teamuser = TeamUser.objects.get(email=request.user.email)
-	a_id = request.POST.get('a_id')
-	account = Account.objects.get(id=a_id)
-	teamuser.account = account
-	teamuser.exp_date = datetime.date.today() + timedelta(days=30)
-	teamuser.save()
+	account = Account.objects.get(id=request.POST.get('a_id'))
 
 	card = request.POST.get('stripeToken')
+	stripe.api_key = settings.STRIPE_KEYS['stripe_secret_key']
 
-	stripe.api_key = stripe_keys['stripe_secret_key']
-	customer = stripe.Customer.create(
-		email=teamuser.email,
-		card=card
-	)
+	if not card:	# update subscription
+		subscription = stripe.Subscription.retrieve(teamuser.subscription_id)
+		subscription.plan = account.stripe_id
+		subscription.save()
+	else:		# for the first time
+		customer = stripe.Customer.create(
+			email=teamuser.email,
+			plan=account.stripe_id,
+			card=card
+		)
 
-	charge = stripe.Charge.create(
-		customer=customer.id,
-		amount=account.budget*100,
-		currency='usd',
-		description='MVP Charge'
-	)
+		teamuser.customer_id = customer.id
+		teamuser.subscription_id = customer.subscriptions.data[0].id
+		teamuser.last4_card_num = customer.sources.data[0].last4
+		teamuser.exp_date = datetime.date.today() + timedelta(days=30)
 
-	teamuser.last4_card_num = charge.source.last4
+	teamuser.account = account
 	teamuser.save()
 
 	return HttpResponseRedirect('/plan')
@@ -123,9 +119,13 @@ def plan(request):
 def cancel_account(request):
 	teamuser = TeamUser.objects.get(email=request.user.email)
 	teamuser.account = None
+	teamuser.customer_id = None
 	teamuser.save()
-	
-	# remove periodic payment.
+
+	stripe.api_key = settings.STRIPE_KEYS['stripe_secret_key']
+	subscription = stripe.Subscription.retrieve(teamuser.subscription_id)
+	subscription.delete(at_period_end=True)
+
 	return HttpResponseRedirect('/plan')
 
 @login_required
@@ -178,7 +178,7 @@ def invite_user(request):
 		teamuser = tusers[0]
 		email_body = "Dear %s. \nYou've got an invitation from Team: %s \nYou can use all services from the team accepting the following link\n http://www.test.com/accept_invitation/%i/%i \nThank you." % (teamuser.email, team.name, teamuser.id, team.id)
 	else:
-		# generate temperary password
+		# generate temporary password
 		salt = hashlib.sha1(str(random.random())).hexdigest()[:5]
 		password = hashlib.sha1(salt+user_email).hexdigest()
 
@@ -201,3 +201,17 @@ def invite_user(request):
 
 	return HttpResponse('success')
 
+
+
+def stripe_webhook(request):
+	# Retrieve the request's body and parse it as JSON
+	event_json = json.loads(request.body)
+
+	# Verify the event by fetching it from Stripe
+	event = stripe.Event.retrieve(event_json["id"])
+
+	# print event,'#########'
+	# Do something with event
+	# update exp_date and handle card failures
+
+	return HttpResponse(status=200)

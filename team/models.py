@@ -26,7 +26,8 @@ class Account(models.Model):
 	team_limit = models.IntegerField(default=0)
 	budget = models.IntegerField(default=0)
 	description = models.TextField(null=True, blank=True)
-	
+	stripe_id = models.CharField(max_length=50)
+
 	def __unicode__(self):
 		return self.name
 		
@@ -39,7 +40,10 @@ class TeamUser(AbstractUser):
 	is_temp = models.BooleanField(default=False)
 	exp_date = models.DateField(null=True, blank=True)
 	last4_card_num = models.CharField(max_length=4, null=True, blank=True)
-	
+	phone = models.CharField(max_length=20, null=True, blank=True)
+	customer_id = models.CharField(max_length=50, null=True, blank=True)
+	subscription_id = models.CharField(max_length=50, null=True, blank=True)
+
 	def __unicode__(self):
 		return self.username
 

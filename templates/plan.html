@@ -11,7 +11,7 @@
     <p> Card number: **** **** **** {{ teamuser.last4_card_num }}</p>
     <p> Expiratoin Date: {{ teamuser.exp_date }}</p>
     <p> Bill Amount: ${{ account.budget }}</p><br>
-    <p>You can create upto <b>{{ account.team_limit }}</b> teams with this account.</p>
+    <p>You can create up to <b>{{ account.team_limit }}</b> teams with this account.</p>
     <hr>
     <a href="#" onclick="cancel_account();" class="btn btn-primary" style="margin-right:20px;"> Cancel Account </a>    
     {% else %}
@@ -19,6 +19,9 @@
     <hr>
     <p> You don't have bill information. </p>
     <p> Your activity with this account is limited. </p>
+    {% if teamuser.exp_date %}
+    <p> You can manage your team(s) until {{ teamuser.exp_date }}. </p>
+    {% endif %}
     <hr>
     {% endif %}
     <a href="/update_account" class="btn btn-primary" style="margin-right:20px;"> Update Account </a>    
