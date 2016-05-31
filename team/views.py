@@ -1,5 +1,6 @@
 import hashlib, datetime, random
 import stripe
+import requests
 import json
 from datetime import timedelta
 
@@ -12,7 +13,7 @@ from django.conf import settings
 from django.contrib.auth.hashers import *
 
 from .models import *
-
+from .forms import *
 
 def dashboard(request):
 	return render(request, 'dashboard.html')
@@ -43,8 +44,10 @@ def myteam_info(request, id):
 def add_service(request, id):
 	team = Team.objects.get(id=id)
 	services = team.service.all()
-	services = [service.id for service in services]
-	other_services = Service.objects.all().exclude(id__in=services)
+	services = [service.name for service in services]
+	other_services = [item[0] for item in SERVICES]
+	other_services = list(set(other_services)-set(services))
+
 	return render(request, 'add_service.html', {
 		'team': team,
 		'services': other_services,
@@ -79,7 +82,7 @@ def charge_account(request):
 		subscription = stripe.Subscription.retrieve(teamuser.subscription_id)
 		subscription.plan = account.stripe_id
 		subscription.save()
-	else:		# for the first time
+	else:			# for the first time
 		customer = stripe.Customer.create(
 			email=teamuser.email,
 			plan=account.stripe_id,
@@ -96,14 +99,75 @@ def charge_account(request):
 
 	return HttpResponseRedirect('/plan')
 
-@login_required
-def add_service_real(request, s_id, t_id):
-	team = Team.objects.get(id=t_id)
-	service = Service.objects.get(id=s_id)
-	team.service.add(service)
-	team.save()
 
-	return HttpResponseRedirect('/team/'+t_id)
+GITHUB_ERRORS = {
+	'Bad credentials': 'The token you provided is not correct. Please check again!',
+	'Not Found': 'There is no such organization. Please check again!',
+}
+
+
+@login_required
+def add_service_real(request, s_name, t_id):
+	if request.method == 'GET':
+		if s_name == 'Github':
+			form = GithubForm(initial={'name': s_name})
+			template = 'service/github.html'
+	else:
+		if s_name == 'Github':
+			form = GithubForm(request.POST)
+			template = 'service/github.html'
+			if form.is_valid():
+				url = 'https://api.github.com/orgs/%s/teams' % form.cleaned_data['org_name']
+				header = {"Authorization": "token "+form.cleaned_data['token']}
+
+				res = requests.get(url=url, headers=header)
+				res_json = res.json()
+				if type(res_json) is dict:
+					form.errors['Error: '] = GITHUB_ERRORS[res_json['message']]
+				else:
+					team_id = ''
+					for team in res_json:
+						if team['name'] == form.cleaned_data['team_name']:
+							team_id = team['id']
+							break
+					if team_id == '':
+						form.errors['Error: '] = 'There is no such team. Please check again!'
+					else:						
+						service = Service()
+						service.name = s_name
+						service.token = form.cleaned_data['token']
+						service.org_name = form.cleaned_data['org_name']
+						service.team_name = form.cleaned_data['team_name']
+						service.team_id = team_id
+						service.save()
+						team = Team.objects.get(id=t_id)
+						team.service.add(service)
+						team.save()
+
+						send_invitation_github(team, service)
+						return HttpResponseRedirect('/team/'+t_id)
+
+	return render(request, template, {
+		'form': form,
+		't_id': t_id,
+	})
+
+def send_invitation_github(team, service):
+	for member in team.member.all():
+		member_login = get_member_name_with_email_github(member.email)
+		if member_login != '':
+			url = 'https://api.github.com/teams/%s/memberships/%s' % (service.team_id, member_login)
+			header = {"Authorization": "token "+service.token}
+			res = requests.put(url=url, headers=header)
+
+def get_member_name_with_email_github(email):	
+	url = 'https://api.github.com/search/users?q=%s+in%%3Aemail' % email
+	res = requests.get(url=url)
+	res_json = res.json()
+	if int(res_json['total_count']) == 0:
+		return ''
+	else:
+		return res_json['items']['login']
 
 @login_required
 def plan(request):
@@ -140,15 +204,8 @@ def accept_invitation(request, m_id, t_id):
 			'services': services,
 			'team': team,
 			})
-
 	else:
 		return HttpResponse('There is no such team here!')
-
-	service = Service.objects.get(id=s_id)
-	team.service.add(service)
-	team.save()
-
-	return HttpResponseRedirect('/team/'+t_id)
 
 @csrf_exempt
 def create_team(request):
@@ -164,6 +221,14 @@ def remove_service(request):
 	t_id = request.POST.get('t_id')
 	team = Team.objects.get(id=t_id)
 	team.service.remove(s_id)
+
+	for member in team.member.all():
+		member_login = get_member_name_with_email_github(member.email)
+		if member_login != '':
+			url = 'https://api.github.com/teams/%s/memberships/%s' % (service.team_id, member_login)
+			header = {"Authorization": "token "+service.token}
+			res = requests.delete(url=url, headers=header)
+
 	return HttpResponse('success')
 
 

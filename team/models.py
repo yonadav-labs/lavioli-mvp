@@ -4,15 +4,24 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 
+SERVICES = (
+	('Trello', 'Trello'),
+	('Github', 'Github'),
+	('Bitbucket', 'Bitbucket'),
+	('Slack', 'Slack'),
+	('Google Apps', 'Google Apps'))
+
 class Service(models.Model):
 	"""
 	Service models.Model
 	needs to be modified
 	"""
-	name = models.CharField(max_length=50)
-	token = models.CharField(max_length=200)
+	name = models.CharField(choices=SERVICES, max_length=50)
+	token = models.CharField(max_length=200, null=True, blank=True)
+	org_name = models.CharField(max_length=200, null=True, blank=True)
+	team_name = models.CharField(max_length=200, null=True, blank=True)
+	team_id = models.CharField(max_length=200, null=True, blank=True)
 	is_active = models.BooleanField(default=True)
-	# more fields
 
 	def __unicode__(self):
 		return self.name

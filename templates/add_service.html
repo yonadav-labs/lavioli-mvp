@@ -11,9 +11,9 @@
       <tbody>
       {% for service in services %}
         <tr>
-          <td>{{ service.name }}</td>
+          <td>{{ service }}</td>
           <td>
-            <a href="/add_service_real/{{service.id}}/{{team.id}}" class="btn-xs btn-primary" style="float: right;"> Add Service </a>
+            <a href="/add_service_real/{{service}}/{{team.id}}" class="btn-xs btn-primary" style="float: right;"> Add Service </a>
           </td>
         </tr>
       {% endfor %}
