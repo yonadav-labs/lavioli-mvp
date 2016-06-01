@@ -169,6 +169,9 @@ def send_invitation_github_individual(email, service):
 		url = 'https://api.github.com/teams/%s/memberships/%s' % (service.team_id, member_login)
 		header = {"Authorization": "token "+service.token}
 		res = requests.put(url=url, headers=header)
+		print res
+	else:
+		print "Email {} did not correspond to a user".format(email)
 
 def delete_membership_github_individual(email, service):
 	'''
@@ -191,7 +194,9 @@ def get_member_name_with_email_github(email):
 	if int(res_json['total_count']) == 0:
 		return ''
 	else:
-		return res_json['items']['login']
+		print res_json
+		print res_json['items'][0]['login']
+		return res_json['items'][0]['login']
 
 @login_required
 def plan(request):
