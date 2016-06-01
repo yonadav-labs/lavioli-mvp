@@ -18,6 +18,7 @@ urlpatterns = [
     url(r'^add_service/(?P<id>\d+)$', team.views.add_service, name='add_service'),
     url(r'^add_service_real/(?P<s_name>.+)/(?P<t_id>\d+)$', team.views.add_service_real, name='add_service_real'),
     url(r'^remove_service$', team.views.remove_service, name='remove_service'),
+    url(r'^remove_member$', team.views.remove_member, name='remove_member'),
     url(r'^accept_invitation/(?P<m_id>\d+)/(?P<t_id>\d+)$', team.views.accept_invitation, name='accept_invitation'),
     url(r'^charge_account$', team.views.charge_account, name='charge_account'),
     url(r'^cancel_account$', team.views.cancel_account, name='cancel_account'),    

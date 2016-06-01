@@ -140,11 +140,12 @@ def add_service_real(request, s_name, t_id):
 						service.team_name = form.cleaned_data['team_name']
 						service.team_id = team_id
 						service.save()
+
 						team = Team.objects.get(id=t_id)
 						team.service.add(service)
 						team.save()
 
-						send_invitation_github(team, service)
+						send_invitation_github_team(team, service)
 						return HttpResponseRedirect('/team/'+t_id)
 
 	return render(request, template, {
@@ -152,15 +153,38 @@ def add_service_real(request, s_name, t_id):
 		't_id': t_id,
 	})
 
-def send_invitation_github(team, service):
+def send_invitation_github_team(team, service):
+	'''
+	send invitations to team members to github with their emails
+	'''
 	for member in team.member.all():
-		member_login = get_member_name_with_email_github(member.email)
-		if member_login != '':
-			url = 'https://api.github.com/teams/%s/memberships/%s' % (service.team_id, member_login)
-			header = {"Authorization": "token "+service.token}
-			res = requests.put(url=url, headers=header)
+		send_invitation_github_individual(member.email, service)
+
+def send_invitation_github_individual(email, service):
+	'''
+	send invitation to a user to github with his email.
+	'''
+	member_login = get_member_name_with_email_github(email)
+	if member_login != '':
+		url = 'https://api.github.com/teams/%s/memberships/%s' % (service.team_id, member_login)
+		header = {"Authorization": "token "+service.token}
+		res = requests.put(url=url, headers=header)
+
+def delete_membership_github_individual(email, service):
+	'''
+	delete membership of the user to github service with his email.
+	'''
+	member_login = get_member_name_with_email_github(email)
+	if member_login != '':
+		url = 'https://api.github.com/teams/%s/memberships/%s' % (service.team_id, member_login)
+		header = {"Authorization": "token "+service.token}
+		res = requests.delete(url=url, headers=header)		
 
 def get_member_name_with_email_github(email):	
+	'''
+	get login from an existing user on github with his email.
+	return login if success, empty string if not
+	'''
 	url = 'https://api.github.com/search/users?q=%s+in%%3Aemail' % email
 	res = requests.get(url=url)
 	res_json = res.json()
@@ -199,6 +223,14 @@ def accept_invitation(request, m_id, t_id):
 	if team:
 		team = team[0]
 		services = team.service.all()
+
+		# send invitation for services
+		for service in services:
+			if service.name == 'Github':
+				send_invitation_github_individual(teamuser.email, service)
+			else:
+				pass
+
 		return render(request, 'accept_invitation.html', {
 			'teamuser': teamuser,
 			'services': services,
@@ -220,17 +252,31 @@ def remove_service(request):
 	s_id = request.POST.get('s_id')
 	t_id = request.POST.get('t_id')
 	team = Team.objects.get(id=t_id)
+	service = Service.objects.get(id=s_id)
 	team.service.remove(s_id)
 
 	for member in team.member.all():
-		member_login = get_member_name_with_email_github(member.email)
-		if member_login != '':
-			url = 'https://api.github.com/teams/%s/memberships/%s' % (service.team_id, member_login)
-			header = {"Authorization": "token "+service.token}
-			res = requests.delete(url=url, headers=header)
+		delete_membership_github_individual(member.email, service)
 
 	return HttpResponse('success')
 
+
+@csrf_exempt
+def remove_member(request):
+	m_id = request.POST.get('m_id')
+	t_id = request.POST.get('t_id')
+	teamuser = TeamUser.objects.get(id=m_id)
+	team = Team.objects.get(id=t_id)
+	team.member.remove(m_id)
+
+	# remove all service from him
+	for service in team.service.all():
+		if service.name == 'Github':
+			delete_membership_github_individual(teamuser.email, service)
+		else:
+			pass
+
+	return HttpResponse('success')
 
 @csrf_exempt
 def invite_user(request):

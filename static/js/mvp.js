@@ -153,6 +153,20 @@ function remove_service(s_id, t_id)
   } 
 }
 
+function remove_member(m_id, t_id)
+{
+  var r = confirm("Are you sure to remove this member?");
+  if (r == true) {
+      $.post('/remove_member', {'m_id': m_id, 't_id': t_id})
+      .success(function(result){
+        console.log('The member is removed successfully!');
+        location.reload();
+      });
+  } else {
+      return false;
+  } 
+}
+
 function cancel_account()
 {
     $( "#account_cancel_dlg" ).dialog({
