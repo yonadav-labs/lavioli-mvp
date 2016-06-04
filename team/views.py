@@ -44,6 +44,7 @@ def myteam_info(request, id):
 def add_service(request, id):
 	team = Team.objects.get(id=id)
 	services = team.service.all()
+	# deal with service name
 	services = [service.name for service in services]
 	other_services = [item[0] for item in SERVICES]
 	other_services = list(set(other_services)-set(services))
@@ -105,6 +106,9 @@ GITHUB_ERRORS = {
 	'Not Found': 'There is no such organization. Please check again!',
 }
 
+BITBUCKET_ERRORS = {
+	401: 'Password is incorrect. Please check again',
+}
 
 @login_required
 def add_service_real(request, s_name, t_id):
@@ -112,6 +116,9 @@ def add_service_real(request, s_name, t_id):
 		if s_name == 'Github':
 			form = GithubForm(initial={'name': s_name})
 			template = 'service/github.html'
+		elif s_name == 'Bitbucket':
+			form = BitbucketForm(initial={'name': s_name})
+			template = 'service/bitbucket.html'			
 	else:
 		if s_name == 'Github':
 			form = GithubForm(request.POST)
@@ -147,6 +154,39 @@ def add_service_real(request, s_name, t_id):
 
 						send_invitation_github_team(team, service)
 						return HttpResponseRedirect('/team/'+t_id)
+		elif s_name == 'Bitbucket':
+			form = BitbucketForm(request.POST)
+			template = 'service/bitbucket.html'
+			if form.is_valid():
+				team = Team.objects.get(id=t_id)
+				url = 'https://api.bitbucket.org/1.0/groups/%s/' % team.owner.email
+				res = requests.get(url=url, auth=(team.owner.email, form.cleaned_data['password']))
+				flag = False
+				if res.status_code != 200:
+					form.errors['Error: '] = BITBUCKET_ERRORS[res.status_code]
+				else:
+					res_json = res.json()
+					group_slug = get_slug(form.cleaned_data['group_name'])
+					for group in res_json:
+						if group['slug'] == group_slug:
+							flag = True
+							break
+					if not flag:
+						form.errors['Error: '] = 'There is no such organization. Please check again!'
+					else:						
+						service = Service()
+						service.name = s_name
+						service.token = form.cleaned_data['password']
+						service.org_name = group_slug
+						service.save()
+
+						team = Team.objects.get(id=t_id)
+						team.service.add(service)
+						team.save()
+
+						add_member_bitbucket_group(team, service)
+						return HttpResponseRedirect('/team/'+t_id)
+
 
 	return render(request, template, {
 		'form': form,
@@ -159,6 +199,24 @@ def send_invitation_github_team(team, service):
 	'''
 	for member in team.member.all():
 		send_invitation_github_individual(member.email, service)
+
+def add_member_bitbucket_group(team, service):
+	'''
+	add team members to bitbucket with their emails
+	'''
+	for member in team.member.all():
+		add_member_bitbucket_individual(team.owner.email, member.email, service)
+
+def add_member_bitbucket_individual(accountemail, email, service):
+	url = 'https://api.bitbucket.org/1.0/groups/%s/%s/members/%s' % (accountemail, service.org_name, email)
+	data = '{}'
+	header = {'Content-Type': 'application/json'}
+
+	r = requests.put(url=url, auth=(accountemail, service.token), data=data, headers=header)
+
+def delete_membership_bitbucket_individual(accountemail, email, service):
+	url = 'https://api.bitbucket.org/1.0/groups/%s/%s/members/%s' % (accountemail, service.org_name, email)
+	r = requests.delete(url=url, auth=(accountemail, service.token))
 
 def send_invitation_github_individual(email, service):
 	'''
@@ -194,8 +252,6 @@ def get_member_name_with_email_github(email):
 	if int(res_json['total_count']) == 0:
 		return ''
 	else:
-		print res_json
-		print res_json['items'][0]['login']
 		return res_json['items'][0]['login']
 
 @login_required
@@ -233,6 +289,8 @@ def accept_invitation(request, m_id, t_id):
 		for service in services:
 			if service.name == 'Github':
 				send_invitation_github_individual(teamuser.email, service)
+			elif service.name == 'Bitbucket':
+				add_member_bitbucket_individual(team.owner.email, teamuser.email, service)
 			else:
 				pass
 
@@ -261,7 +319,10 @@ def remove_service(request):
 	team.service.remove(s_id)
 
 	for member in team.member.all():
-		delete_membership_github_individual(member.email, service)
+		if service.name == 'Github':
+			delete_membership_github_individual(member.email, service)
+		elif service.name == 'Bitbucket':
+			delete_membership_bitbucket_individual(team.owner.email, member.email, service)
 
 	return HttpResponse('success')
 
@@ -278,6 +339,8 @@ def remove_member(request):
 	for service in team.service.all():
 		if service.name == 'Github':
 			delete_membership_github_individual(teamuser.email, service)
+		elif service.name == 'Bitbucket':
+			delete_membership_bitbucket_individual(team.owner.email, teamuser.email, service)
 		else:
 			pass
 
@@ -331,3 +394,11 @@ def stripe_webhook(request):
 	# update exp_date and handle card failures
 
 	return HttpResponse(status=200)
+
+def get_slug(name):
+	'''
+	get slug from the string
+	'''
+	name = name.lower()
+	name = name.replace(' ', '-')
+	return name

@@ -9,15 +9,22 @@ SERVICES = (
 	('Github', 'Github'),
 	('Bitbucket', 'Bitbucket'),
 	('Slack', 'Slack'),
-	('Google Apps', 'Google Apps'))
+	('Google Apps', 'Google Apps'),
+	('Jira', 'Jira'),
+	('Confluence', 'Confluence'),
+	('HipChat', 'HipChat'),
+)
 
 class Service(models.Model):
 	"""
 	Service models.Model
+	named for Github
 	needs to be modified
 	"""
 	name = models.CharField(choices=SERVICES, max_length=50)
+	# password in bitbucket, 
 	token = models.CharField(max_length=200, null=True, blank=True)
+	# group slug in bitbucket
 	org_name = models.CharField(max_length=200, null=True, blank=True)
 	team_name = models.CharField(max_length=200, null=True, blank=True)
 	team_id = models.CharField(max_length=200, null=True, blank=True)
