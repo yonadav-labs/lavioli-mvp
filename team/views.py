@@ -116,17 +116,17 @@ BITBUCKET_ERRORS = {
 
 @login_required
 def add_service_real(request, s_name, t_id):
+	template = 'service/%s.html' % (s_name.replace(' ', ''))
 	if request.method == 'GET':
 		if s_name == 'Github':
 			form = GithubForm(initial={'name': s_name})
-			template = 'service/github.html'
 		elif s_name == 'Bitbucket':
 			form = BitbucketForm(initial={'name': s_name})
-			template = 'service/bitbucket.html'			
+		elif s_name == 'Slack':
+			form = SlackForm(initial={'name': s_name})
 	else:
 		if s_name == 'Github':
 			form = GithubForm(request.POST)
-			template = 'service/github.html'
 			if form.is_valid():
 				url = 'https://api.github.com/orgs/%s/teams' % form.cleaned_data['org_name']
 				header = {"Authorization": "token "+form.cleaned_data['token']}
@@ -160,7 +160,6 @@ def add_service_real(request, s_name, t_id):
 						return HttpResponseRedirect('/team/'+t_id)
 		elif s_name == 'Bitbucket':
 			form = BitbucketForm(request.POST)
-			template = 'service/bitbucket.html'
 			if form.is_valid():
 				team = Team.objects.get(id=t_id)
 				url = 'https://api.bitbucket.org/1.0/groups/%s/' % team.owner.email
@@ -190,6 +189,27 @@ def add_service_real(request, s_name, t_id):
 
 						add_member_bitbucket_group(team, service)
 						return HttpResponseRedirect('/team/'+t_id)
+		elif s_name == 'Slack':
+			form = SlackForm(request.POST)
+			if form.is_valid():
+				team = Team.objects.get(id=t_id)
+				url = 'https://slack.com/api/auth.test?token=%s&email=any@email.com&set_active=true' % form.cleaned_data['team_token']
+				res = requests.post(url=url)
+				res_json = res.json()
+				if res_json['ok'] != True:
+					form.errors['Error: '] = 'Team Token is incorrect. Please check again!'
+				else:
+					service = Service()
+					service.name = s_name
+					service.token = form.cleaned_data['team_token']
+					service.save()
+
+					team = Team.objects.get(id=t_id)
+					team.service.add(service)
+					team.save()
+
+					add_member_slack_group(team, service)
+					return HttpResponseRedirect('/team/'+t_id)
 
 
 	return render(request, template, {
@@ -210,6 +230,17 @@ def add_member_bitbucket_group(team, service):
 	'''
 	for member in team.member.all():
 		add_member_bitbucket_individual(team.owner.email, member.email, service)
+
+def add_member_slack_group(team, service):
+	'''
+	add team members to slack with their emails
+	'''
+	for member in team.member.all():
+		add_member_slack_individual(member.email, service)
+
+def add_member_slack_individual(email, service):
+	url = 'https://anyteam.slack.com/api/users.admin.invite?token=%s&email=%s&set_active=true' % (service.token, email)
+	requests.post(url=url)
 
 def add_member_bitbucket_individual(accountemail, email, service):
 	url = 'https://api.bitbucket.org/1.0/groups/%s/%s/members/%s' % (accountemail, service.org_name, email)
@@ -295,6 +326,8 @@ def accept_invitation(request, m_id, t_id):
 				send_invitation_github_individual(teamuser.email, service)
 			elif service.name == 'Bitbucket':
 				add_member_bitbucket_individual(team.owner.email, teamuser.email, service)
+			elif service.name == 'Slack':
+				add_member_slack_individual(teamuser.email, service)
 			else:
 				pass
 
