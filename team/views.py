@@ -31,14 +31,18 @@ def team_info(request, id):
 
 @login_required
 def myteam_info(request, id):
-	team = Team.objects.get(id=id)
-	members = team.member.all()
-	services = team.service.all()
-	return render(request, 'myteam_info.html', {
-		'team': team,
-		'members': members,
-		'services': services,
-		})
+	team = Team.objects.filter(id=id, member__email=request.user.email)
+	if team:
+		team = team[0]
+		members = team.member.all()
+		services = team.service.all()
+		return render(request, 'myteam_info.html', {
+			'team': team,
+			'members': members,
+			'services': services,
+			})
+	else:
+		return HttpResponse('You are not a member of this team!')
 
 @login_required
 def add_service(request, id):

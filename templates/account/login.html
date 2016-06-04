@@ -9,7 +9,7 @@
 
 <div class="row">
 <div class="col-md-offset-1 col-md-10">
-<h1>{% trans "Sign In" %}</h1>
+<h3>{% trans "Sign In" %}</h3>
 
 {% get_providers as socialaccount_providers %}
 
@@ -35,14 +35,26 @@ for a {{ site_name }} account and sign in below:{% endblocktrans %}</p>
 <a href="{{ signup_url }}">sign up</a> first.{% endblocktrans %}</p>
 {% endif %}
 
-<form class="login" method="POST" action="{% url 'account_login' %}">
+<form class="login form-horizontal" method="POST" action="{% url 'account_login' %}">
   {% csrf_token %}
-  {{ form.as_p }}
+  {% for elem in form %}
+  <div class="form-group">
+    <label class="control-label col-sm-3" for="id_{{elem.name}}">{{elem.label}}:</label>
+    <div class="col-sm-6">
+        {{ elem }} 
+    </div>
+  </div>
+  {% endfor %}
+
   {% if redirect_field_value %}
   <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
   {% endif %}
-  <a class="button secondaryAction" href="{% url 'account_reset_password' %}">{% trans "Forgot Password?" %}</a>
-  <button class="primaryAction" type="submit">{% trans "Sign In" %}</button>
+  <div class="form-group">
+    <div class="col-sm-offset-2 col-sm-5">
+      <button type="submit" class="primaryAction btn btn-primary">{% trans "Sign In" %} &raquo;</button>
+      <a class="button secondaryAction" href="{% url 'account_reset_password' %}">{% trans "Forgot Password?" %}</a>
+    </div>
+  </div>    
 </form>
 </div>
 </div>
