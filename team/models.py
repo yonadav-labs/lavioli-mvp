@@ -22,9 +22,9 @@ class Service(models.Model):
 	needs to be modified
 	"""
 	name = models.CharField(choices=SERVICES, max_length=50)
-	# password in bitbucket, team_token in slack
+	# password-bitbucket, team_token-slack, password-jira
 	token = models.CharField(max_length=200, null=True, blank=True)
-	# group slug in bitbucket
+	# groupslug-bitbucket, sitename-jira, 
 	org_name = models.CharField(max_length=200, null=True, blank=True)
 	team_name = models.CharField(max_length=200, null=True, blank=True)
 	team_id = models.CharField(max_length=200, null=True, blank=True)

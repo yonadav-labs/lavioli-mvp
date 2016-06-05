@@ -3,6 +3,8 @@ import stripe
 import requests
 import json
 from datetime import timedelta
+from jira import JIRA
+from jira.exceptions import JIRAError
 
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect
@@ -111,7 +113,12 @@ GITHUB_ERRORS = {
 }
 
 BITBUCKET_ERRORS = {
-	401: 'Password is incorrect. Please check again',
+	401: 'Password is incorrect. Please check again!',
+}
+
+JIRA_ERRORS = {
+	401: 'Password is incorrect. Please check again!',
+	502: 'Site Name is incorrect. Please check again!',
 }
 
 @login_required
@@ -124,6 +131,8 @@ def add_service_real(request, s_name, t_id):
 			form = BitbucketForm(initial={'name': s_name})
 		elif s_name == 'Slack':
 			form = SlackForm(initial={'name': s_name})
+		elif s_name == 'Jira':
+			form = JiraForm(initial={'name': s_name})
 	else:
 		if s_name == 'Github':
 			form = GithubForm(request.POST)
@@ -210,12 +219,50 @@ def add_service_real(request, s_name, t_id):
 
 					add_member_slack_group(team, service)
 					return HttpResponseRedirect('/team/'+t_id)
+		elif s_name == 'Jira':
+			form = JiraForm(request.POST)
+			if form.is_valid():
+				team = Team.objects.get(id=t_id)
+				try:
+					sitename = form.cleaned_data['sitename']
+					sitename = sitename.replace(';', '')
+					options = {'server': 'https://%s.atlassian.net' % sitename}
+					jira = JIRA(options, basic_auth=('admin', form.cleaned_data['password']))
 
+					service = Service()
+					service.name = s_name
+					service.token = form.cleaned_data['password']
+					service.org_name = sitename
+					service.save()
+
+					team = Team.objects.get(id=t_id)
+					team.service.add(service)
+					team.save()
+
+					add_member_jira_group(team, service)
+					return HttpResponseRedirect('/team/'+t_id)
+
+				except JIRAError, e:
+					form.errors['Error: '] = JIRA_ERRORS[e.status_code]
 
 	return render(request, template, {
 		'form': form,
 		't_id': t_id,
 	})
+
+def add_member_jira_group(team, service):
+	for member in team.member.all():
+		add_member_jira_individual(member.email, service)
+
+def add_member_jira_individual(email, service):
+	options = {'server': 'https://%s.atlassian.net' % service.org_name}
+	jira = JIRA(options, basic_auth=('admin', service.token))
+	jira.add_user(email, email)
+
+def delete_membership_jira_individual(email, service):
+	options = {'server': 'https://%s.atlassian.net' % service.org_name}
+	jira = JIRA(options, basic_auth=('admin', service.token))
+	jira.delete_user(email)
 
 def send_invitation_github_team(team, service):
 	'''
@@ -328,6 +375,8 @@ def accept_invitation(request, m_id, t_id):
 				add_member_bitbucket_individual(team.owner.email, teamuser.email, service)
 			elif service.name == 'Slack':
 				add_member_slack_individual(teamuser.email, service)
+			elif service.name == 'Jira':
+				add_member_jira_individual(teamuser.email, service)
 			else:
 				pass
 
@@ -360,6 +409,8 @@ def remove_service(request):
 			delete_membership_github_individual(member.email, service)
 		elif service.name == 'Bitbucket':
 			delete_membership_bitbucket_individual(team.owner.email, member.email, service)
+		elif service.name == 'Jira':
+			delete_membership_jira_individual(member.email, service)
 
 	return HttpResponse('success')
 
@@ -378,8 +429,8 @@ def remove_member(request):
 			delete_membership_github_individual(teamuser.email, service)
 		elif service.name == 'Bitbucket':
 			delete_membership_bitbucket_individual(team.owner.email, teamuser.email, service)
-		else:
-			pass
+		elif service.name == 'Jira':
+			delete_membership_jira_individual(member.email, service)
 
 	return HttpResponse('success')
 

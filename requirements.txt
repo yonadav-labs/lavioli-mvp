@@ -8,4 +8,4 @@ django-rest-swagger
 django-slack
 trello-python
 django-socialregistration
-
+jira
