@@ -22,7 +22,7 @@ class Service(models.Model):
 	needs to be modified
 	"""
 	name = models.CharField(choices=SERVICES, max_length=50)
-	# password-bitbucket, team_token-slack, password-jira
+	# password-bitbucket, team_token-slack, password-jira, token in hipchat
 	token = models.CharField(max_length=200, null=True, blank=True)
 	# groupslug-bitbucket, sitename-jira, 
 	org_name = models.CharField(max_length=200, null=True, blank=True)

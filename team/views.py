@@ -133,6 +133,8 @@ def add_service_real(request, s_name, t_id):
 			form = SlackForm(initial={'name': s_name})
 		elif s_name == 'Jira':
 			form = JiraForm(initial={'name': s_name})
+		elif s_name == 'HipChat':
+			form = HipChatForm(initial={'name': s_name})
 	else:
 		if s_name == 'Github':
 			form = GithubForm(request.POST)
@@ -244,15 +246,45 @@ def add_service_real(request, s_name, t_id):
 
 				except JIRAError, e:
 					form.errors['Error: '] = JIRA_ERRORS[e.status_code]
+		elif s_name == 'HipChat':
+			form = HipChatForm(request.POST)
+			if form.is_valid():
+				team = Team.objects.get(id=t_id)
+				url = 'https://api.hipchat.com/v2/user/anybody@gmail.com?auth_token=%s' % form.cleaned_data['token']
+				res = requests.post(url=url)
+				if res.status_code == 401:
+					form.errors['Error: '] = 'The Token is incorrect. Please check again!'
+				else:
+					service = Service()
+					service.name = s_name
+					service.token = form.cleaned_data['token']
+					service.save()
+
+					team = Team.objects.get(id=t_id)
+					team.service.add(service)
+					team.save()
+
+					add_member_hipchat_group(team, service)
+					return HttpResponseRedirect('/team/'+t_id)
 
 	return render(request, template, {
 		'form': form,
 		't_id': t_id,
 	})
 
+def add_member_hipchat_group(team, service):
+	for member in team.member.all():
+		add_member_hipchat_individual(member.email, service)
+
 def add_member_jira_group(team, service):
 	for member in team.member.all():
 		add_member_jira_individual(member.email, service)
+
+def add_member_hipchat_individual(email, service):
+	url = 'https://api.hipchat.com/v2/user'
+	data = {'name': email, 'email': email}
+	header = {'Authorization': 'Bearer '+service.token, 'Content-Type': 'application/json'}
+	requests.post(url=url, data=json.dumps(data), headers=header)
 
 def add_member_jira_individual(email, service):
 	options = {'server': 'https://%s.atlassian.net' % service.org_name}
@@ -263,6 +295,11 @@ def delete_membership_jira_individual(email, service):
 	options = {'server': 'https://%s.atlassian.net' % service.org_name}
 	jira = JIRA(options, basic_auth=('admin', service.token))
 	jira.delete_user(email)
+
+def delete_membership_hipchat_individual(email, service):
+	url = 'https://api.hipchat.com/v2/user/%s' % email
+	header = {'Authorization': 'Bearer '+service.token}
+	requests.delete(url=url, headers=header)
 
 def send_invitation_github_team(team, service):
 	'''
@@ -377,8 +414,8 @@ def accept_invitation(request, m_id, t_id):
 				add_member_slack_individual(teamuser.email, service)
 			elif service.name == 'Jira':
 				add_member_jira_individual(teamuser.email, service)
-			else:
-				pass
+			elif service.name == 'HipChat':
+				add_member_hipchat_individual(teamuser.email, service)
 
 		return render(request, 'accept_invitation.html', {
 			'teamuser': teamuser,
@@ -411,6 +448,8 @@ def remove_service(request):
 			delete_membership_bitbucket_individual(team.owner.email, member.email, service)
 		elif service.name == 'Jira':
 			delete_membership_jira_individual(member.email, service)
+		elif service.name == 'HipChat':
+			delete_membership_hipchat_individual(member.email, service)
 
 	return HttpResponse('success')
 
@@ -430,7 +469,9 @@ def remove_member(request):
 		elif service.name == 'Bitbucket':
 			delete_membership_bitbucket_individual(team.owner.email, teamuser.email, service)
 		elif service.name == 'Jira':
-			delete_membership_jira_individual(member.email, service)
+			delete_membership_jira_individual(teamuser.email, service)
+		elif service.name == 'HipChat':
+			delete_membership_hipchat_individual(teamuser.email, service)
 
 	return HttpResponse('success')
 

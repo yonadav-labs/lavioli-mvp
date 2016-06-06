@@ -19,3 +19,7 @@ class JiraForm(forms.Form):
 	name = forms.CharField()
 	sitename = forms.CharField(widget=forms.TextInput(attrs={'required': True, 'class': 'form-control'}), label='Atlassian Site Name')
 	password = forms.CharField(widget=forms.PasswordInput(attrs={'required': True, 'class': 'form-control'}), label='Password on Atlassian')
+
+class HipChatForm(forms.Form):
+	name = forms.CharField()
+	token = forms.CharField(widget=forms.TextInput(attrs={'required': True, 'class': 'form-control'}), label='Token')
