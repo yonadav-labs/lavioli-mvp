@@ -5,6 +5,7 @@ import json
 from datetime import timedelta
 from jira import JIRA
 from jira.exceptions import JIRAError
+import trolly
 
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect
@@ -121,6 +122,11 @@ JIRA_ERRORS = {
 	502: 'Site Name is incorrect. Please check again!',
 }
 
+TRELLO_ERRORS = {
+	401: 'Token is incorrect. Please check again!',
+	502: 'Team Short Name is incorrect. Please check again!',
+}
+
 @login_required
 def add_service_real(request, s_name, t_id):
 	template = 'service/%s.html' % (s_name.replace(' ', ''))
@@ -135,6 +141,8 @@ def add_service_real(request, s_name, t_id):
 			form = JiraForm(initial={'name': s_name})
 		elif s_name == 'HipChat':
 			form = HipChatForm(initial={'name': s_name})
+		elif s_name == 'Trello':
+			form = TrelloForm(initial={'name': s_name})
 	else:
 		if s_name == 'Github':
 			form = GithubForm(request.POST)
@@ -266,11 +274,50 @@ def add_service_real(request, s_name, t_id):
 
 					add_member_hipchat_group(team, service)
 					return HttpResponseRedirect('/team/'+t_id)
+		elif s_name == 'Trello':
+			form = TrelloForm(request.POST)
+			if form.is_valid():
+				team = Team.objects.get(id=t_id)
+				try:
+					API_KEY = form.cleaned_data['key']
+					TOKEN = form.cleaned_data['token']
+					team_name = form.cleaned_data['team_name']
+
+					client = trolly.client.Client(API_KEY, TOKEN)
+
+					team_id = ''
+					for organisation in client.get_organisations():
+						if organisation.name == team_name:
+							team_id = organisation.id
+							break
+					if team_id != '':
+						service = Service()
+						service.name = s_name
+						service.token = TOKEN
+						service.org_name = API_KEY
+						service.team_id = team_id
+						service.save()
+
+						team = Team.objects.get(id=t_id)
+						team.service.add(service)
+						team.save()
+
+						add_member_trello_group(team, organisation)
+						return HttpResponseRedirect('/team/'+t_id)
+					else:
+						form.errors['Error: '] = TRELLO_ERRORS[502]	
+
+				except Exception, e:
+					form.errors['Error: '] = TRELLO_ERRORS[e.status]
 
 	return render(request, template, {
 		'form': form,
 		't_id': t_id,
 	})
+
+def add_member_trello_group(team, organisation):
+	for member in team.member.all():
+		organisation.add_member(member.email, member.email)
 
 def add_member_hipchat_group(team, service):
 	for member in team.member.all():
@@ -350,6 +397,19 @@ def send_invitation_github_individual(email, service):
 	else:
 		print "Email {} did not correspond to a user".format(email)
 
+def delete_membership_trello_individual(email, service):
+	client = trolly.client.Client(service.org_name, service.token)
+	organisation = client.get_organisation(service.team_id)	
+	user_id = get_user_id_with_email_trello(email, organisation)
+	if user_id:
+		organisation.remove_member(user_id)
+
+def get_user_id_with_email_trello(email, organisation):
+	for member in organisation.get_members():
+		if member.get_member_information()['email'] == email:
+			return member.get_member_information()['id']
+	return False
+
 def delete_membership_github_individual(email, service):
 	'''
 	delete membership of the user to github service with his email.
@@ -416,6 +476,10 @@ def accept_invitation(request, m_id, t_id):
 				add_member_jira_individual(teamuser.email, service)
 			elif service.name == 'HipChat':
 				add_member_hipchat_individual(teamuser.email, service)
+			elif service.name == 'Trello':
+				client = trolly.client.Client(service.org_name, service.token)
+				organisation = client.get_organisation(service.team_id)
+				organisation.add_member(teamuser.email, teamuser.email)
 
 		return render(request, 'accept_invitation.html', {
 			'teamuser': teamuser,
@@ -450,6 +514,8 @@ def remove_service(request):
 			delete_membership_jira_individual(member.email, service)
 		elif service.name == 'HipChat':
 			delete_membership_hipchat_individual(member.email, service)
+		elif service.name == 'Trello':
+			delete_membership_trello_individual(member.email, service)
 
 	return HttpResponse('success')
 
@@ -472,6 +538,8 @@ def remove_member(request):
 			delete_membership_jira_individual(teamuser.email, service)
 		elif service.name == 'HipChat':
 			delete_membership_hipchat_individual(teamuser.email, service)
+		elif service.name == 'Trello':
+			delete_membership_trello_individual(member.email, service)
 
 	return HttpResponse('success')
 

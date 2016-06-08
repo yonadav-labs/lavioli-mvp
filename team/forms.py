@@ -23,3 +23,9 @@ class JiraForm(forms.Form):
 class HipChatForm(forms.Form):
 	name = forms.CharField()
 	token = forms.CharField(widget=forms.TextInput(attrs={'required': True, 'class': 'form-control'}), label='Token')
+
+class TrelloForm(forms.Form):
+	name = forms.CharField()
+	key = forms.CharField(widget=forms.TextInput(attrs={'required': True, 'class': 'form-control'}), label='Key')
+	token = forms.CharField(widget=forms.TextInput(attrs={'required': True, 'class': 'form-control'}), label='Token')
+	team_name = forms.CharField(widget=forms.TextInput(attrs={'required': True, 'class': 'form-control'}), label='Team Short Name')

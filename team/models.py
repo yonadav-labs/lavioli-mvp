@@ -11,7 +11,7 @@ SERVICES = (
 	('Slack', 'Slack'),
 	('Google Apps', 'Google Apps'),
 	('Jira', 'Jira'),
-	('Confluence', 'Confluence'),
+	# ('Confluence', 'Confluence'),
 	('HipChat', 'HipChat'),
 )
 
@@ -22,11 +22,13 @@ class Service(models.Model):
 	needs to be modified
 	"""
 	name = models.CharField(choices=SERVICES, max_length=50)
-	# password-bitbucket, team_token-slack, password-jira, token in hipchat
+	# password-bitbucket, team_token-slack, password-jira, token in hipchat, token in trello
 	token = models.CharField(max_length=200, null=True, blank=True)
-	# groupslug-bitbucket, sitename-jira, 
+	# groupslug-bitbucket, sitename-jira, key in trello
 	org_name = models.CharField(max_length=200, null=True, blank=True)
+	# team short name in trello
 	team_name = models.CharField(max_length=200, null=True, blank=True)
+	# in trello
 	team_id = models.CharField(max_length=200, null=True, blank=True)
 	is_active = models.BooleanField(default=True)
 
