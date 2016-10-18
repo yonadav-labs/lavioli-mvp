@@ -1,9 +1,22 @@
+## Purpose
+
 The project will require integration with at least 6 publicly available APIs, and must have the framework to work with more using a unified framework.  [e.g. we want the ability to invite a user by email to a number of web services, and require that 'invite' work for all web services.]
 
-Brief overview of the site requirements:
+## Brief overview of the site requirements:
+
 1) Landing page
 2) User registration/signin/password reset/simple team management
 3) Email sending capability
 4) Web service integration framework [example above]
 5) Dashboard/item listing
 
+
+## Integrated APIs
+
+Github
+Hipchat
+Jira
+Bitbucket
+Slack
+Trello
+Pivotaltracker
